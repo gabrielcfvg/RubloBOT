@@ -1,0 +1,5 @@
+```
+bolsas
+
+Esse comando mostra uma tabela com todas as bolsas e seus respectivos valores atuais.
+```

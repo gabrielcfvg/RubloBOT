@@ -1,0 +1,5 @@
+```
+conta
+
+Este comando mostra a sua quantidade de Rublos e as suas ações e seus valores
+```
