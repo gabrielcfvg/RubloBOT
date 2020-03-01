@@ -1,9 +1,16 @@
-import discord, datetime, time, pickle, traceback, threading, time
+import discord
+import datetime
+import time
+import pickle
+import traceback
+import threading
+
 from discord.ext import commands
 from os.path import exists
 from sys import exc_info
-from os import listdir
+from os import listdir, remove
 from gen_graph import gen_graph
+import matplotlib.pyplot as matplot
 
 
 #VARIAVEIS
@@ -30,7 +37,7 @@ def loop_bolsas():
             open(database_bolsas + A, 'wb').write(pickle.dumps(bolsa))
             del bolsa
         
-        time.sleep(5)
+        time.sleep(20)
 
 
 class Bolsas():
@@ -39,20 +46,23 @@ class Bolsas():
         self.media = media
         self.valor = media
         self.nome = nome
+        self.hist = [0 for A in range(900)]
     
     def passar(self):
         
         self.valor = gen_graph(1, self.media, self.valor)[0]
+        self.hist.insert(0, self.valor)
+        self.hist.pop()
 
 
 class Camarada:
 
     next_work = 0
-    ações = {}
 
     def __init__(self):
         self.rublos = 0
-            
+        self.ações = {}
+
     def trabalhar(self, num):
 
         self.rublos += num*funções.eficiencia_de_trabalho(num)
@@ -70,6 +80,7 @@ class Resposta:
         
         await enviar(f"{round(cliente.latency * 1000)}ms")
 
+
     @staticmethod
     async def registrar(enviar, autor):
         
@@ -83,22 +94,7 @@ class Resposta:
         else:
             
             await enviar("registro já existente!")
-        
-    @staticmethod
-    async def conta(enviar, autor):
 
-        if funções.verificar(autor):
-        
-            obj = pickle.loads(open(database+str(autor.id), 'rb').read())
-            valor = obj.rublos
-            open(database+str(autor.id), 'wb').write(pickle.dumps(obj))
-            del obj
-            
-            await enviar(f"Você possui {valor} rublos")
-        
-        else:
-            
-            await enviar("Você ainda não está registrado")
 
     #temp
     @staticmethod
@@ -114,6 +110,7 @@ class Resposta:
         else:
             return "Você ainda não está registrado"
     
+
     #temp
     @staticmethod
     def diminuir(autor, num):
@@ -128,6 +125,7 @@ class Resposta:
         else:
             return "Você ainda não está registrado"
 
+
     @staticmethod
     async def ajuda(enviar, mensagem):
         from helpfiles_base import helpfile
@@ -135,15 +133,32 @@ class Resposta:
         split = mensagem.split(' ')
         msg = split[1] if len(split) == 2 else "default"
         
-        
-        if msg in helpfile:
+        saida = ''
+
+        if msg != "default":
+
+            if msg in helpfile:
+                
+                saida = helpfile[msg]
             
-            return open(helpfile[msg], 'r', encoding='utf-8').read()
-        
+            else:
+                saida = "Ajuda não existente para este comando"
+
         else:
-            return "Ajuda não existente para este comando"
+
+            saida += "```\nlista de todos os comandos do bot:\n\n"
             
+            for A in helpfile:
+                saida += A + '\n'
+
+            saida += """\nPara ver o arquivo de ajuda de um comando em especifico, digite: "ru ajuda [nome_do_comando]"\n```"""
+            
+                
+
         del helpfile
+
+        await enviar(saida)
+
 
     @staticmethod
     async def trabalhar(enviar, autor, mensagem):
@@ -174,6 +189,7 @@ class Resposta:
 
             return f"Trabalho concluido com sucesso, eficiencia de {funções.eficiencia_de_trabalho(num)} rublos por minuto, foram adicionados {num*funções.eficiencia_de_trabalho(num)} rublos a sua conta, só poderá trabalhar novamente em {num} minutos, ou seja, {temp}"
     
+
     @staticmethod
     async def rank(enviar):
         
@@ -182,10 +198,16 @@ class Resposta:
         
         await enviar(embed=saida)
 
+
     @staticmethod
     async def bolsa_valores(enviar):
         
-        await enviar(funções.bolsa_valores())
+        
+        saida = discord.Embed(title="Valor das ações", color=0x00ff00)
+        saida.add_field(name=":", value=funções.bolsa_valores())
+        
+        await enviar(embed=saida)
+
 
     @staticmethod
     async def compra_venda_ações(enviar, mensagem, autor):
@@ -207,11 +229,45 @@ class Resposta:
         else:
             await enviar("Você não está registrado")
 
-    #temp
-    @staticmethod
-    async def teste(enviar):
 
-        await enviar("funcionou")
+    @staticmethod
+    async def ações_usuario(enviar, autor):
+        
+        if funções.verificar(autor):
+
+            name = str(autor).split("#")[0]
+
+            li = funções.ações_usuario(autor)
+
+            saida = discord.Embed(title=(f"Conta de {name}"), color=0x00ff00)
+            saida.add_field(name='Rublos:', value=li[1])
+            saida.add_field(name='Ações', value=li[0])
+
+            await enviar(embed=saida)
+        
+        else:
+            await enviar("Você não está registrado")
+
+    
+    @staticmethod
+    async def grafico(enviar, mensagem):
+
+        args = mensagem.split(' ')
+        ação = args[1]
+        tempo = int(args[2])
+
+        if tempo > 300:
+            await enviar("O periodo maximo é de 5 horas, ou seja, 300 minutos")
+            return
+
+        funções.gerar_grafico(ação, tempo)
+
+        await enviar("grafico:", file=discord.File('grafico.png'))
+
+        remove('grafico.png')
+
+
+        pass
 
 
 class funções:
@@ -277,12 +333,18 @@ class funções:
     def bolsa_valores():
 
         saida = ''
+        saida += '```diff\n'
+
         for A in listdir(database_bolsas):
 
                 bolsa = pickle.loads(open(database_bolsas + A, 'rb').read())
-                saida += str(bolsa.nome)+' = '+str(bolsa.valor)+'\n'
+                
+                saida += f"+{bolsa.nome} === {bolsa.valor} R"
+
                 open(database_bolsas + A, 'wb').write(pickle.dumps(bolsa))
                 del bolsa
+
+        saida += '\n```'
         return saida
     
 
@@ -335,6 +397,55 @@ class funções:
         return saida
 
 
+    @staticmethod
+    def ações_usuario(autor):
+        
+        obj = pickle.loads(open(database+str(autor.id), 'rb').read())
+
+        dic = obj.ações
+        ru = obj.rublos
+
+        open(database+str(autor.id), 'wb').write(pickle.dumps(obj))
+        del obj
+
+        saida = ''
+        saida += '```diff\n'
+        saida += '-AÇÃO : QUANTIDADE\n'
+        saida += '-----------------\n'
+        for A in dic:
+
+            saida += f"+{A} = {dic[A]}\n"
+
+        saida += '\n```'
+
+        saida2 = f"```diff\n-Você pussui {ru} rublos\n```"
+
+        return [saida, saida2]
+
+
+    @staticmethod
+    def gerar_grafico(ação_alvo, tempo):
+        from helpfiles_base import ações as helpações
+
+
+        ação = pickle.loads(open(helpações[ação_alvo], 'rb').read())
+        
+        historico = ação.hist[:tempo*3]
+
+        open(helpações[ação_alvo], 'wb').write(pickle.dumps(ação))
+        del ação
+
+        historico.reverse()
+        y = list(range(tempo*3))
+        
+        matplot.clf()
+
+        matplot.style.use('ggplot')
+        matplot.plot(y, historico)
+
+        remove('grafico.png')        
+        matplot.savefig('grafico.png')
+
 #PROGRAMA PRINCIPAL
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 threading.Thread(target=loop_bolsas, daemon = True).start()
@@ -364,29 +475,35 @@ async def on_message(message):
                     
                     await Resposta.ping(enviar)
 
+
                 elif mensagem.startswith("registrar"):
 
                     await Resposta.registrar(enviar, autor)
-                
+
+
                 #temp
                 elif mensagem.startswith("aumentar"):
 
                     valor = int(mensagem.split(' ')[1])
                     await enviar(Resposta.aumentar(autor, valor))
-                
+
+
                 #temp
                 elif mensagem.startswith("diminuir"):
 
                     valor = int(mensagem.split(' ')[1])
                     await enviar(Resposta.diminuir(autor, valor))
-                
+
+
                 elif mensagem.startswith("conta"):
 
-                    await Resposta.conta(enviar, autor)
+                    await Resposta.ações_usuario(enviar, autor)
+
 
                 elif mensagem.startswith("trabalhar"):
                     
                     await Resposta.trabalhar(enviar, autor, mensagem)
+
 
                 #temp
                 elif mensagem.startswith("mod"):
@@ -395,27 +512,32 @@ async def on_message(message):
                     obj.next_work = 0
                     open(database+str(autor.id), 'wb').write(pickle.dumps(obj))
                     del obj
-                
+
+
                 elif mensagem.startswith("rank"):
                     
                     await Resposta.rank(enviar)
+
 
                 elif mensagem.startswith("bolsas"):
                     
                     await Resposta.bolsa_valores(enviar)
 
+
                 elif mensagem.startswith("ações"):
 
                     await Resposta.compra_venda_ações(enviar, mensagem, autor)
 
-                #temp
-                elif mensagem.startswith("teste"):
+                elif mensagem.startswith("grafico"):
 
-                    await Resposta.teste(enviar)
+                    await Resposta.grafico(enviar, mensagem)
+
+                #=====================================
 
                 elif mensagem.startswith("ajuda"):
 
                     await Resposta.ajuda(enviar, mensagem)
+
 
                 else:
                     await enviar("Comando não existente!")
