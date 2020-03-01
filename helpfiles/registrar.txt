@@ -1,4 +1,0 @@
-```
-registrar
-Este comando te introduz no sistema do bot Rublo e te permite usar todos os outros comandos do bot
-```
