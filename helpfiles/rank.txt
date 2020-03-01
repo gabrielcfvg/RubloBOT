@@ -1,5 +1,0 @@
-```
-rank
-
-Este comando mostra uma tabela com os camaradas com a maior quantidade de Rublos do servidor!
-```
