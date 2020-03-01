@@ -12,7 +12,6 @@ from os import listdir, remove
 from gen_graph import gen_graph
 import matplotlib.pyplot as matplot
 
-
 #VARIAVEIS
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -31,6 +30,8 @@ def loop_bolsas():
     while True:
 
         for A in listdir(database_bolsas):
+
+            
 
             bolsa = pickle.loads(open(database_bolsas + A, 'rb').read())
             bolsa.passar()          

@@ -1,5 +1,5 @@
 
-def gen_graph(size, media, start=False, high=1.7, mid=1.2):
+def gen_graph(size, media, start=False, high=1.7, mid=1.2, _min=5, _max=25):
 
     from random import randint
 
@@ -10,7 +10,7 @@ def gen_graph(size, media, start=False, high=1.7, mid=1.2):
     Y = 0
 
     for A in range(size):
-        a = randint(10, 100)
+        a = randint(_min, _max)
         
         if n1 >= media/mid and n1 <= media*mid:
             X = int(a*-1)
