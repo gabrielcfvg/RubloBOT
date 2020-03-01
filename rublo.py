@@ -36,6 +36,7 @@ def loop_bolsas():
             bolsa.passar()          
             open(database_bolsas + A, 'wb').write(pickle.dumps(bolsa))
             del bolsa
+            time.sleep(0.05)
         
         time.sleep(20)
 
@@ -254,13 +255,14 @@ class Resposta:
 
         args = mensagem.split(' ')
         ação = args[1]
-        tempo = int(args[2])
+        tempo = int(args[2]) if len(args) > 2 else 30
 
         if tempo > 300:
             await enviar("O periodo maximo é de 5 horas, ou seja, 300 minutos")
             return
 
-        funções.gerar_grafico(ação, tempo)
+        if funções.gerar_grafico(ação, tempo) == 1:
+            await enviar("Ação não existente")
 
         await enviar("grafico:", file=discord.File('grafico.png'))
 
@@ -339,7 +341,7 @@ class funções:
 
                 bolsa = pickle.loads(open(database_bolsas + A, 'rb').read())
                 
-                saida += f"+{bolsa.nome} === {bolsa.valor} R"
+                saida += f"+{bolsa.nome} === {bolsa.valor} R\n"
 
                 open(database_bolsas + A, 'wb').write(pickle.dumps(bolsa))
                 del bolsa
@@ -350,10 +352,13 @@ class funções:
 
     @staticmethod
     def comprar_vender_ações(autor, ação, num, op):
-        import helpfiles_base
+        
+        if not exists(database_bolsas + ação):
+            return "Ação não existente"
+        
         
         obj = pickle.loads(open(database + str(autor.id), 'rb').read())
-        bolsa = pickle.loads(open(helpfiles_base.ações[ação], 'rb').read())
+        bolsa = pickle.loads(open(database_bolsas + ação, 'rb').read())
         saida = ''
         if op == 1:
             
@@ -388,11 +393,11 @@ class funções:
             else:
                 saida = "Ações insuficientes para realizar a venda"
         
-        open(helpfiles_base.ações[ação], 'wb').write(pickle.dumps(bolsa))
+        open(database_bolsas + ação, 'wb').write(pickle.dumps(bolsa))
         open(database + str(autor.id), 'wb').write(pickle.dumps(obj))
         del obj
         del bolsa
-        del helpfiles_base
+        
 
         return saida
 
@@ -425,14 +430,15 @@ class funções:
 
     @staticmethod
     def gerar_grafico(ação_alvo, tempo):
-        from helpfiles_base import ações as helpações
 
+        if not exists(database_bolsas+ação_alvo):
+            return 1 #erro
 
-        ação = pickle.loads(open(helpações[ação_alvo], 'rb').read())
+        ação = pickle.loads(open(database_bolsas + ação_alvo, 'rb').read())
         
         historico = ação.hist[:tempo*3]
 
-        open(helpações[ação_alvo], 'wb').write(pickle.dumps(ação))
+        open(database_bolsas + ação_alvo, 'wb').write(pickle.dumps(ação))
         del ação
 
         historico.reverse()
@@ -442,9 +448,9 @@ class funções:
 
         matplot.style.use('ggplot')
         matplot.plot(y, historico)
-
-        remove('grafico.png')        
+        
         matplot.savefig('grafico.png')
+
 
 #PROGRAMA PRINCIPAL
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
