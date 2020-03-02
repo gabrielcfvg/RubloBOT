@@ -20,6 +20,7 @@ cliente = commands.Bot(command_prefix='ru!')
 log = "log.txt"
 database = "./camaradas/"
 database_bolsas = './bolsas/'
+canais = ["floodbot", "off-topic"]
 
 
 #FUNÇÕES
@@ -32,14 +33,13 @@ def loop_bolsas():
         for A in listdir(database_bolsas):
 
             
-
             bolsa = pickle.loads(open(database_bolsas + A, 'rb').read())
             bolsa.passar()          
             open(database_bolsas + A, 'wb').write(pickle.dumps(bolsa))
             del bolsa
-            time.sleep(0.05)
+            time.sleep(0.1)
         
-        time.sleep(20)
+        time.sleep(15)
 
 
 class Bolsas():
@@ -48,7 +48,7 @@ class Bolsas():
         self.media = media
         self.valor = media
         self.nome = nome
-        self.hist = [0 for A in range(900)]
+        self.hist = [media for A in range(900)]
     
     def passar(self):
         
@@ -171,25 +171,32 @@ class Resposta:
 
         if funções.verificar(autor):
             
+            saida = ''
+
             obj = pickle.loads(open(database+str(autor.id), 'rb').read())
             if obj.next_work < time.time():
                 
                 if num <= 0:
-                    return "Não é possivel trabalhar por um valor negativo ou nulo"
+                    
+                    saida = "Não é possivel trabalhar por um valor negativo ou nulo"
                 elif num > 1440:
-                    return "Não é possivel trabalhar por um periodo maior que 24 horas"
-                
-                obj.trabalhar(num)
-
+                    
+                    saida = "Não é possivel trabalhar por um periodo maior que 24 horas"
+                else:              
+                    
+                    obj.trabalhar(num)
+                    temp = obj.next_work_data()
+                    saida = f"Trabalho concluido com sucesso, eficiencia de {funções.eficiencia_de_trabalho(num)} rublos por minuto, foram adicionados {num*funções.eficiencia_de_trabalho(num)} rublos a sua conta, só poderá trabalhar novamente em {num} minutos, ou seja, {temp}"
 
             else:
-                return f"Você só poderá trabalhar novamente em {obj.next_work_data()}"
+                saida =  f"Você só poderá trabalhar novamente em {obj.next_work_data()}"
 
             temp = obj.next_work_data()
             open(database+str(autor.id), 'wb').write(pickle.dumps(obj))
             del obj
 
-            return f"Trabalho concluido com sucesso, eficiencia de {funções.eficiencia_de_trabalho(num)} rublos por minuto, foram adicionados {num*funções.eficiencia_de_trabalho(num)} rublos a sua conta, só poderá trabalhar novamente em {num} minutos, ou seja, {temp}"
+            await enviar(saida)
+            
     
 
     @staticmethod
@@ -323,8 +330,14 @@ class funções:
         saida += '```diff\n'
 
         for A in range(21 if len(data)> 20 else len(data)):
+            
             temp1 = f"\n{'-' if A%2 else '+'}{('0'+str(A+1)) if A+1 < 10 else A+1} - {data[A][0]}"
-            temp2 = f"{'-'*(30-len(temp1))}{data[A][1]}"
+            
+            if data[A][0] != '☠☠☠HighBoar☠☠☠#6477':
+                temp2 = f"{'-'*(35-len(temp1))}{data[A][1]}"
+            else:
+                temp2 = f"{'-'*(30-len(temp1))}{data[A][1]}"
+
             saida += temp1+temp2
         
         saida += '\n';saida += '\n```'
@@ -363,9 +376,9 @@ class funções:
         saida = ''
         if op == 1:
             
-            if obj.rublos >= bolsa.valor*num:           
+            if obj.rublos >= (bolsa.valor*num)*1.05:           
                 
-                obj.rublos -= bolsa.valor*num
+                obj.rublos -= int((bolsa.valor*num)*1.05)
                 
                 if ação in obj.ações:
                     obj.ações[ação] += num
@@ -373,7 +386,7 @@ class funções:
                     obj.ações[ação] = num
                 
                 
-                bolsa.valor += num*8
+                bolsa.valor += (bolsa.valor*num)*0.05
 
                 saida = "Ações compradas com sucesso"
             
@@ -385,9 +398,9 @@ class funções:
             if ação in obj.ações:
                 if obj.ações[ação] >= num:
                     
-                    obj.rublos += bolsa.valor*num
+                    obj.rublos += int((bolsa.valor*num)*0.95)
                     obj.ações[ação] -= num
-                    bolsa.valor -+ num*8
+                    bolsa.valor -= (bolsa.valor*num)*0.05
 
                     saida = "Ações vendidas com sucesso"
                 
@@ -469,6 +482,10 @@ async def on_message(message):
     
     if message.content.startswith('ru'):
          
+        
+        if str(message.channel) not in canais:
+            return
+        
         if message.author.bot == False:
 
             try:

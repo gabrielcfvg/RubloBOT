@@ -91,7 +91,7 @@ Esse comando serve para realizar a compra e venda de ações.
 Como usar:
 
 1 = operação, "comprar" ou "vender";
-2 = ação, a ação que quer comprar ou vender, utilize o comando "bolsas" para ver as ações disponiveis;
+2 = ação, a ação que quer comprar ou vender, utilize o comando "ru bolsas" para ver as ações disponiveis;
 3 = quantidade da ação que quer comprar ou vender
 
 comando = "ru ações {1} {2} {2}"
@@ -113,6 +113,7 @@ Como usar:
 1 - ação desejada, utilize o comando "ru bolsas" para ver as ações disponiveis
 2 = o range do grafico, a quantidade de minutos atrás que quer que estejam inclusos no grafico, maximo de 300
 
-comando = "ru grafico {1} {2}
+comando = "ru grafico {1} {2}"
+```
 """
 }

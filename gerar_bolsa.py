@@ -7,7 +7,7 @@ class Bolsas():
         self.media = media
         self.valor = media
         self.nome = nome
-        self.hist = [0 for A in range(900)]
+        self.hist = [media for A in range(900)]
     
     def passar(self):
         
