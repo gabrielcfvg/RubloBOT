@@ -11,7 +11,7 @@ class Bolsas():
     
     def passar(self):
         
-        self.valor = gen_graph(1, self.media, self.valor)[0]
+        self.valor = int(gen_graph(1, self.media, int(self.valor))[0])
         self.hist.insert(0, self.valor)
         self.hist.pop()
 

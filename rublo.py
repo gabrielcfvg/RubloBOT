@@ -52,7 +52,7 @@ class Bolsas():
     
     def passar(self):
         
-        self.valor = gen_graph(1, self.media, self.valor)[0]
+        self.valor = int(gen_graph(1, self.media, int(self.valor))[0])
         self.hist.insert(0, self.valor)
         self.hist.pop()
 
@@ -196,8 +196,10 @@ class Resposta:
             del obj
 
             await enviar(saida)
+        
+        else:
+            await enviar("Você não está registrado")
             
-    
 
     @staticmethod
     async def rank(enviar):
@@ -274,7 +276,7 @@ class Resposta:
 
         await enviar("grafico:", file=discord.File('grafico.png'))
 
-        remove('grafico.png')
+        #remove('grafico.png')
 
 
         pass
@@ -365,7 +367,7 @@ class funções:
     
 
     @staticmethod
-    def comprar_vender_ações(autor, ação, num, op):
+    def comprar_vender_ações(autor, ação, num, modo):
         
         if not exists(database_bolsas + ação):
             return "Ação não existente"
@@ -374,39 +376,63 @@ class funções:
         obj = pickle.loads(open(database + str(autor.id), 'rb').read())
         bolsa = pickle.loads(open(database_bolsas + ação, 'rb').read())
         saida = ''
-        if op == 1:
-            
-            if obj.rublos >= (bolsa.valor*num)*1.05:           
-                
-                obj.rublos -= int((bolsa.valor*num)*1.05)
-                
+        
+        if modo == 1:
+
+            total = 0
+            _valor = bolsa.valor
+            for A in range(num):
+
+                total += _valor
+                _valor += (bolsa.media*0.05)
+
+            if obj.rublos >= total:
+
+                obj.rublos -= total
+                bolsa.valor += (bolsa.media*0.05)*num
+
                 if ação in obj.ações:
                     obj.ações[ação] += num
                 else:
                     obj.ações[ação] = num
-                
-                
-                bolsa.valor += (bolsa.valor*num)*0.05
 
                 saida = "Ações compradas com sucesso"
-            
             else:
-                saida = "Rublos insuficientes para compra"
-        
-        elif op == 2:
+                saida = "Você não possui rublos suficientes para essa compra"
+
+
+        elif modo == 2:  
+            
+            menos = num
+
+            total = 0
+            _valor = bolsa.valor
+            for A in range(num):
+                
+                total += _valor
+
+                if not (_valor - (bolsa.media*0.05)) <= 0:
+                    _valor -= (bolsa.media*0.05)
+                else:
+                    menos -= 1
+                    print("A")
 
             if ação in obj.ações:
+
+
                 if obj.ações[ação] >= num:
-                    
-                    obj.rublos += int((bolsa.valor*num)*0.95)
+
+                    bolsa.valor -= (bolsa.media*0.05)*menos
+                    obj.rublos += total*0.95
                     obj.ações[ação] -= num
-                    bolsa.valor -= (bolsa.valor*num)*0.05
 
                     saida = "Ações vendidas com sucesso"
-                
+
+                else:
+                    saida = "Ações insuficientes"
             else:
-                saida = "Ações insuficientes para realizar a venda"
-        
+                saida = "Ações insuficientes"
+
         open(database_bolsas + ação, 'wb').write(pickle.dumps(bolsa))
         open(database + str(autor.id), 'wb').write(pickle.dumps(obj))
         del obj
